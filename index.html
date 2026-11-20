@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>生日快乐宝贝</title>
-<link rel="stylesheet" href="./3D.css">
+<link rel="stylesheet" href="3D.css">
 </head>
 <body>
   <audio id="bg-audio" src="./白慕寒 - .海屿你 (破碎版).mp3" preload="auto"></audio>
@@ -12,7 +13,6 @@
   <div class="ui">
     <div class="cake-title">
       <h1>🎂 HAPPY BIRTHDAY 🎂</h1>
-      <p>拖拽旋转 · 点击"吹/点蜡烛"有惊喜</p>
     </div>
     <div class="heart-title">
       <h1 style="font-size:1.6rem;letter-spacing:8px;text-shadow:0 0 20px rgba(200,220,255,0.6),0 0 40px rgba(150,180,255,0.3);">L O V E</h1>
@@ -20,75 +20,62 @@
     </div>
   </div>
 
-  <!-- 蛋糕层 -->
+  <!-- 蛋糕层（底层） -->
   <canvas id="cakeCanvas"></canvas>
 
   <!-- 环形相册层 -->
   <div id="albumWrap">
     <div class="wr">
       <div class="cu">
-        <div id="a" class="a1"><img src="./1.jpg" alt=""></div>
-        <div id="a" class="a2"><img src="./2.jpg" alt=""></div>
-        <div id="a" class="a3"><img src="./3.jpg" alt=""></div>
-        <div id="a" class="a4"><img src="./4.jpg" alt=""></div>
-        <div id="a" class="a5"><img src="./5.jpg" alt=""></div>
-        <div id="a" class="a6"><img src="./6.jpg" alt=""></div>
-        <div id="a" class="a7"><img src="./7.jpg" alt=""></div>
-        <div id="a" class="a8"><img src="./8.jpg" alt=""></div>
-        <div id="a" class="a9"><img src="./9.jpg" alt=""></div>
+        <div id="a" class="a1"><img src="7.jpg" alt=""></div>
+        <div id="a" class="a2"><img src="8.jpg" alt=""></div>
+        <div id="a" class="a3"><img src="9.jpg" alt=""></div>
+        <div id="a" class="a4"><img src="10.jpg" alt=""></div>
+        <div id="a" class="a5"><img src="11.jpg" alt=""></div>
+        <div id="a" class="a6"><img src="12.jpg" alt=""></div>
+        <div id="a" class="a7"><img src="13.jpg" alt=""></div>
+        <div id="a" class="a8"><img src="14.jpg" alt=""></div>
+        <div id="a" class="a9"><img src="15.jpg" alt=""></div>
       </div>
     </div>
   </div>
 
-  <!-- 统一背景层 -->
+  <!-- 统一背景层（已不使用，保留元素） -->
   <div id="sceneBg"></div>
 
-  <!-- 爱心层 -->
+  <!-- 爱心层（左 1/3） -->
   <canvas id="heartCanvas"></canvas>
 
-  <!-- 魔方层 -->
+  <!-- 玫瑰花束层（右 1/3） -->
+  <canvas id="roseCanvas"></canvas>
+
+  <!-- 魔方层（中 1/3） -->
   <div id="cubeWrap">
     <div class="cube-scene">
       <div class="cube">
-        <div class="f-front"><img src="./11.jpg"></div>
-        <div class="f-back"><img src="./12.jpg"></div>
-        <div class="f-top"><img src="./13.png"></div>
-        <div class="f-bottom"><img src="./6.jpg"></div>
-        <div class="f-left"><img src="./7.jpg"></div>
-        <div class="f-right"><img src="./8.jpg"></div>
-        <div class="inner-cube">
-          <div class="i-front"><img src="./10.jpg"></div>
-          <div class="i-back"><img src="./10.jpg"></div>
-          <div class="i-top"><img src="./10.jpg"></div>
-          <div class="i-bottom"><img src="./10.jpg"></div>
-          <div class="i-left"><img src="./10.jpg"></div>
-          <div class="i-right"><img src="./10.jpg"></div>
-        </div>
+        <div class="f-front"><img src="1.jpg"></div>
+        <div class="f-back"><img src="2.jpg"></div>
+        <div class="f-top"><img src="3.jpg"></div>
+        <div class="f-bottom"><img src="4.jpg"></div>
+        <div class="f-left"><img src="5.jpg"></div>
+        <div class="f-right"><img src="6.jpg"></div>
+        <span class="inner-cube">
+          <span class="i-front"><img src="11.jpg"></span>
+          <span class="i-back"><img src="11.jpg"></span>
+          <span class="i-top"><img src="11.jpg"></span>
+          <span class="i-bottom"><img src="11.jpg"></span>
+          <span class="i-left"><img src="11.jpg"></span>
+          <span class="i-right"><img src="11.jpg"></span>
+        </span>
       </div>
     </div>
   </div>
 
-  <div class="hint">左键拖拽旋转视角 · 滚轮缩放 · 右键平移</div>
+  <div class="hint"></div>
 
   <div class="controls">
     <button id="candleBtn" onclick="cakeToggleCandles()">🕯️ 吹/点蜡烛</button>
   </div>
-
- <script>
-  const audio = document.getElementById('bg-audio');
-  audio.loop = true;
-
-  // 尝试自动播放
-  audio.muted = true;
-    audio.play().catch(() => {
-      console.log('自动播放被阻止，请用户交互');
-    });
-    // 播放按钮
-    document.getElementById('candleBtn').addEventListener('click', () => {
-      audio.muted = false;
-      audio.play();
-    });
- </script> 
- <script src="./最终.js"></script>
 </body>
+<script src="最终.js"></script>
 </html>
