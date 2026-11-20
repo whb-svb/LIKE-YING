@@ -1,4 +1,19 @@
+const audio = document.getElementById('bg-audio');
+  audio.loop = true;
+
+  // 尝试自动播放（静音）
+  audio.muted = true;
+    audio.play().catch(() => {
+      console.log('自动播放被阻止，请用户交互');
+    });
+    // 播放按钮
+    document.getElementById('candleBtn').addEventListener('click', () => {
+      audio.muted = false;
+      audio.play();
+    });
+
 //  粒子生日蛋糕
+
 (function() {
     const canvas = document.getElementById('cakeCanvas');
     const ctx = canvas.getContext('2d');
@@ -72,6 +87,18 @@
       return { x: W/2 + p[0]*sc, y: H/2 - p[1]*sc, z: zc, scale: sc };
     }
 
+    function hueShift(r, g, b, deg) {
+      const rad = deg * Math.PI / 180;
+      const c = Math.cos(rad), s = Math.sin(rad);
+      let nr = r*(0.213 + c*0.787 - s*0.213) + g*(0.715 - c*0.715 - s*0.715) + b*(0.072 - c*0.072 + s*0.928);
+      let ng = r*(0.213 - c*0.213 + s*0.143) + g*(0.715 + c*0.285 + s*0.140) + b*(0.072 - c*0.072 - s*0.283);
+      let nb = r*(0.213 - c*0.213 - s*0.787) + g*(0.715 - c*0.715 + s*0.715) + b*(0.072 + c*0.928 + s*0.072);
+      nr = nr < 0 ? 0 : (nr > 255 ? 255 : nr);
+      ng = ng < 0 ? 0 : (ng > 255 ? 255 : ng);
+      nb = nb < 0 ? 0 : (nb > 255 ? 255 : nb);
+      return [nr|0, ng|0, nb|0];
+    }
+    
     class CakeParticle {
       constructor(tx, ty, tz, r, g, b, type) {
         this.tx = tx; this.ty = ty; this.tz = tz;
@@ -210,7 +237,7 @@
           }
         });
       } else {
-        // 吹灭蜡烛 → 显示爱心层 + 隐藏吹蜡烛按钮 + 隐藏环形相册 + 隐藏蛋糕粒子
+        // 吹灭蜡烛 → 爱心 / 玫瑰 / 魔方 三屏 + 隐藏吹蜡烛按钮 + 隐藏环形相册
         showHeartLayer();
         document.getElementById('candleBtn').style.display = 'none';
       }
@@ -233,9 +260,12 @@
         const p = project(s.x, s.y, s.z);
         if (p && p.z > 0) {
           const alpha = 0.3 + Math.sin(time*1.5 + s.twinkle)*0.3;
-          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          // 流光：色相沿空间位置 + 时间流动，形成彩色星雾扫过感
+          const hue = (time*38 + (s.x + s.y + s.z)*0.06 + s.twinkle*40) % 360;
+          const sat = 55 + Math.sin(time*1.2 + s.twinkle)*20;
+          ctx.fillStyle = `hsla(${hue},${sat}%,78%,${alpha})`;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, s.size, 0, Math.PI*2);
+          ctx.arc(p.x, p.y, s.size*1.3, 0, Math.PI*2);
           ctx.fill();
         }
       });
@@ -253,6 +283,14 @@
           const { p, pr } = item;
           const size = Math.max(0.5, 2.2 * pr.scale * 0.15);
           const alpha = p.type === 2 ? (candlesLit ? 0.9 : 0.3) : 0.85;
+          // 流光：蛋糕主体(type0)色相沿环绕角+高度随时间流动；火焰/蜡烛/盘子保持本色
+          let cr = p.r*255, cg = p.g*255, cb = p.b*255;
+          if (p.type === 0) {
+            const shift = Math.sin(time*1.4 + Math.atan2(p.z, p.x)*1.5 + p.ty*0.08)*55
+                        + Math.sin(time*0.6)*25;
+            const hc = hueShift(cr, cg, cb, shift);
+            cr = hc[0]; cg = hc[1]; cb = hc[2];
+          }
           if (p.type === 2 && candlesLit) {
             const grad = ctx.createRadialGradient(pr.x, pr.y, 0, pr.x, pr.y, size*4);
             grad.addColorStop(0, `rgba(${p.r*255},${p.g*255},${p.b*255},0.5)`);
@@ -262,7 +300,7 @@
             ctx.arc(pr.x, pr.y, size*4, 0, Math.PI*2);
             ctx.fill();
           }
-          ctx.fillStyle = `rgba(${p.r*255},${p.g*255},${p.b*255},${alpha})`;
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
           ctx.beginPath();
           ctx.arc(pr.x, pr.y, size, 0, Math.PI*2);
           ctx.fill();
@@ -275,14 +313,16 @@
   })();
 
 
+
   //  粒子爱心
+
   (function() {
     const canvas = document.getElementById('heartCanvas');
     const ctx = canvas.getContext('2d');
 
     let W, H, CX, CY;
     function resize() {
-      W = canvas.width = canvas.offsetWidth;
+      W = canvas.width = canvas.offsetWidth || Math.round(window.innerWidth/3);
       H = canvas.height = window.innerHeight;
       CX = W / 2;
       CY = H * 0.42;
@@ -516,7 +556,7 @@
       if (bt < 0.1) beatScale = 1 + Math.sin(bt/0.1*Math.PI)*0.08;
       else if (bt > 0.15 && bt < 0.25) beatScale = 1 + Math.sin((bt-0.15)/0.1*Math.PI)*0.05;
 
-      // 背景完全透明  下层自动旋转的星空透出，爱心层与魔方层共用
+      // 背景完全透明 → 下层自动旋转的星空透出，三屏共用同一背景
       ctx.clearRect(0, 0, W, H);
 
       // 底部发光
@@ -543,12 +583,17 @@
     }
 
     window.showHeartLayer = function() {
-      // 隐藏环形相册（与蛋糕一起消失）
+      // 隐藏环形相册（与蛋糕层一起消失）
       document.getElementById('albumWrap').classList.add('hide');
-      // 保留自动旋转的星空背景给爱心层与魔方层共用
-      // 隐藏蛋糕粒子（星空继续旋转）
+      // 不显示 sceneBg：保留自动旋转的星空背景给三层共用
       if (window.cakeSetHidden) window.cakeSetHidden(true);
+      // 爱心层（左 1/3）
       canvas.style.display = 'block';
+      // 玫瑰花束层（右 1/3）
+      const rose = document.getElementById('roseCanvas');
+      rose.style.display = 'block';
+      if (window.roseStart) window.roseStart();
+      // 魔方层（中 1/3）
       document.getElementById('cubeWrap').classList.add('show');
       document.body.classList.add('show-heart');
       // 替换底部提示文字
@@ -565,5 +610,283 @@
       // 自动一直换色
       if (autoColorTimer) clearInterval(autoColorTimer);
       autoColorTimer = setInterval(changeColor, 2500);
+    };
+  })();
+
+
+
+  // ============================================================
+  //  3D 粒子玫瑰花束（右侧 1/3 屏）
+  //  像爱心一样整体变色：每几秒整束花一起换一种颜色，颜色间柔和过渡
+  // ============================================================
+  (function() {
+    const canvas = document.getElementById('roseCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let W, H, CX, CY;
+    function resize() {
+      W = canvas.width = canvas.offsetWidth || Math.round(window.innerWidth/3);
+      H = canvas.height = window.innerHeight;
+      CX = W / 2;
+      CY = H * 0.46;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // 3D 相机（自动绕 Y 轴环绕，带俯视）
+    let yaw = 0.4;
+    let pitch = 0.34;
+    const camDist = 340;
+    const FOCAL = 1400;
+
+    function project(x, y, z) {
+      const c1 = Math.cos(yaw), s1 = Math.sin(yaw);
+      let rx = x * c1 + z * s1;
+      let rz = -x * s1 + z * c1;
+      const c2 = Math.cos(pitch), s2 = Math.sin(pitch);
+      const ry = y * c2 - rz * s2;
+      const rz2 = y * s2 + rz * c2;
+      const depth = rz2 + camDist;
+      if (depth < 20) return null;
+      const sc = FOCAL / depth;
+      return { x: CX + rx * sc, y: CY - ry * sc, z: depth, scale: sc };
+    }
+
+    const parts = [];
+    const TAU = Math.PI * 2;
+
+    function lerp(a, b, t) {
+      return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+    }
+    function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
+    // 整束花配色板（和爱心同款机制）：玫瑰红 / 玫粉 / 香槟金 / 星空蓝 / 紫罗兰 / 冰晶白
+    const roseSchemes = [
+      { deep:[156,14,48],   mid:[240,52,92],   light:[255,152,178], glow:[255,120,160], glow2:[255,205,130] },
+      { deep:[170,26,110],  mid:[238,86,168],  light:[255,172,218], glow:[255,132,198], glow2:[255,224,150] },
+      { deep:[176,112,18],  mid:[238,172,58],  light:[255,222,148], glow:[255,200,110], glow2:[255,162,120] },
+      { deep:[28,72,152],   mid:[68,142,236],  light:[168,212,255], glow:[130,182,255], glow2:[190,232,255] },
+      { deep:[92,40,162],   mid:[160,92,236],  light:[214,180,255], glow:[182,132,255], glow2:[255,192,232] },
+      { deep:[104,110,132], mid:[214,222,244], light:[255,255,255], glow:[204,218,255], glow2:[178,238,255] }
+    ];
+    function blendScheme(A, B, t) {
+      return {
+        deep: lerp(A.deep, B.deep, t),
+        mid: lerp(A.mid, B.mid, t),
+        light: lerp(A.light, B.light, t),
+        glow: lerp(A.glow, B.glow, t),
+        glow2: lerp(A.glow2, B.glow2, t)
+      };
+    }
+    let schemeIdx = 0;
+    let schemeFrom = roseSchemes[0];
+    let schemeTo = roseSchemes[0];
+    let mixT = 1;
+    let autoColorTimer = null;
+    function changeColor() {
+      schemeFrom = blendScheme(schemeFrom, schemeTo, mixT);
+      schemeIdx = (schemeIdx + 1) % roseSchemes.length;
+      schemeTo = roseSchemes[schemeIdx];
+      mixT = 0;
+    }
+
+    // 一朵玫瑰：四层花瓣叠成的立体螺旋花朵（lv 记录深浅渐变位置，颜色跟随整束配色）
+    function addRose(ox, oy, oz, s, seed) {
+      const layers = [
+        { N: 72, baseR: 4.0,  rangeR: 4.5,  topY: 13.5, drop: 2.6, turns: 2.4, phase: 0.0 },
+        { N: 76, baseR: 8.0,  rangeR: 5.5,  topY: 11.0, drop: 4.2, turns: 3.0, phase: 1.6 },
+        { N: 80, baseR: 12.5, rangeR: 6.0,  topY: 8.5,  drop: 6.5, turns: 3.6, phase: 3.1 },
+        { N: 84, baseR: 17.5, rangeR: 6.5,  topY: 6.0,  drop: 9.0, turns: 4.2, phase: 4.7 }
+      ];
+      layers.forEach((L, k) => {
+        for (let i = 0; i < L.N; i++) {
+          const t = i / L.N;
+          const theta = t * TAU * L.turns + L.phase + seed;
+          const r = (L.baseR + L.rangeR * t) * (1 + 0.26 * Math.sin(theta * 5.2) * t);
+          const px = Math.cos(theta) * r;
+          const pz = Math.sin(theta) * r;
+          const py = L.topY - L.drop * Math.sin(t * Math.PI)
+                   + 1.3 * Math.sin(theta * 5.2 + 1.2) * t;
+          let lv;
+          if (k === 0) lv = 0.05 + t * 0.22;
+          else if (k === 1) lv = 0.30 + t * 0.25;
+          else if (k === 2) lv = 0.58 + t * 0.22;
+          else lv = 0.82 + t * 0.20;
+          const jitter = (Math.random() - 0.5) * 24;
+          parts.push({
+            x: ox + px * s, y: oy + py * s, z: oz + pz * s,
+            lv: lv, jit: jitter,
+            size: 0.52 + Math.random() * 0.5,
+            ph: Math.random() * TAU, wp: theta * 0.55 + r * 0.18, kind: 0
+          });
+        }
+      });
+      // 花蕊：顶部一簇亮粒子
+      for (let i = 0; i < 26; i++) {
+        const a = Math.random() * TAU, r = Math.random() * 2.8;
+        parts.push({
+          x: ox + Math.cos(a) * r * s, y: oy + (13.5 + Math.random() * 2.5) * s, z: oz + Math.sin(a) * r * s,
+          lv: 1.1, jit: 0, size: 0.55 + Math.random() * 0.45,
+          ph: Math.random() * TAU, wp: a * 0.8 + 6.0, kind: 0
+        });
+      }
+    }
+
+    // 花茎：从花底弯到花束底部中心（保持绿色不变）
+    function addStem(ox, oy, oz) {
+      const N = 26;
+      const ex = 0, ey = -86, ez = 0;
+      const mx = ox * 0.55, my = (oy - 6 + ey) / 2, mz = oz * 0.55;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const x = (1-t)*(1-t)*ox + 2*(1-t)*t*mx + t*t*ex;
+        const y = (1-t)*(1-t)*(oy - 7) + 2*(1-t)*t*my + t*t*ey;
+        const z = (1-t)*(1-t)*oz + 2*(1-t)*t*mz + t*t*ez;
+        const gcol = lerp([72, 148, 84], [26, 62, 46], t);
+        parts.push({ x, y, z, r: gcol[0], g: gcol[1], b: gcol[2], size: 0.55, ph: Math.random()*TAU, wp: t * 3.2, kind: 1 });
+      }
+    }
+
+    // 叶子：椭圆面片，带弯曲（保持绿色不变）
+    function addLeaf(cx, cy, cz, dx, dz, s) {
+      const N = 30;
+      const px = -dz, pz = dx;
+      for (let i = 0; i < N; i++) {
+        const u = Math.random();
+        const v = (Math.random() - 0.5) * 2;
+        const halfW = Math.sin(u * Math.PI) * 4.6 * s;
+        const along = u * 13 * s;
+        const x = cx + dx * along + px * v * halfW;
+        const z = cz + dz * along + pz * v * halfW;
+        const y = cy + Math.sin(u * Math.PI) * 1.6 * s + Math.abs(v) * 0.6;
+        const gcol = lerp([56, 138, 72], [30, 84, 52], Math.random());
+        parts.push({ x, y, z, r: gcol[0], g: gcol[1], b: gcol[2], size: 0.5, ph: Math.random()*TAU, wp: u * 2.6, kind: 2 });
+      }
+    }
+
+    // 组装花束
+    function buildBouquet() {
+      // 六朵玫瑰（高低错落、大小不一），花头更大更饱满
+      addRose(-24, 8, -11, 1.00, 0.0);
+      addRose( 23, 12, 8,  0.94, 1.7);
+      addRose( -2, 20, -15, 0.86, 3.4);
+      addRose( -10, 14, 12, 0.80, 2.5);
+      addRose(  10, 24, -7, 0.76, 4.8);
+      addRose(  15, 3, -16, 0.70, 5.9);
+      // 花茎
+      addStem(-24, 8, -11);
+      addStem( 23, 12, 8);
+      addStem( -2, 20, -15);
+      addStem( -10, 14, 12);
+      addStem(  10, 24, -7);
+      addStem(  15, 3, -16);
+      // 叶子
+      addLeaf(-20, -22, -6,  -0.9, 0.4, 1.0);
+      addLeaf(-26, -42, -8,   0.3, -1.0, 0.9);
+      addLeaf( 18, -18, 6,    0.9, 0.3, 1.0);
+      addLeaf( 24, -40, 4,   -0.2, -1.0, 0.9);
+      addLeaf( -2, -26, -12,  0.85, 0.5, 1.0);
+      addLeaf(  4, -46, -10, -0.4, 1.0, 0.85);
+      addLeaf(-12, -32, 10,  -0.6, 0.8, 0.8);
+      addLeaf( 10, -30, -4,   0.7, -0.5, 0.8);
+      addLeaf(  0, -56, 6,    0.2, -1.0, 0.8);
+      addLeaf(-16, -50, 2,   -0.8, -0.5, 0.75);
+      // 花束周围漂浮光点（跟随整束配色）
+      for (let i = 0; i < 80; i++) {
+        const a = Math.random() * TAU;
+        const rr = 26 + Math.random() * 60;
+        const y = -70 + Math.random() * 100;
+        const pick = Math.random();
+        parts.push({
+          x: Math.cos(a) * rr, y, z: Math.sin(a) * rr,
+          pk: pick, size: 0.4 + Math.random() * 0.7,
+          ph: Math.random() * TAU, wp: a, kind: 3
+        });
+      }
+    }
+    buildBouquet();
+
+    let time = 0;
+    let running = false;
+
+    function animate() {
+      if (!running) return;
+      requestAnimationFrame(animate);
+      time += 0.016;
+      yaw += 0.0035;
+      pitch = 0.34 + Math.sin(time * 0.25) * 0.04;
+      // 换色柔和过渡（约 0.9 秒渐变到新一色）
+      if (mixT < 1) mixT = Math.min(1, mixT + 0.016 / 0.9);
+
+      const S = blendScheme(schemeFrom, schemeTo, mixT);
+
+      // 透明背景 → 星空透出，三屏共用
+      ctx.clearRect(0, 0, W, H);
+
+      // 投影 + 深度排序
+      const items = [];
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        const pr = project(p.x, p.y, p.z);
+        if (pr) items.push({ p, pr });
+      }
+      items.sort((a, b) => b.pr.z - a.pr.z);
+
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < items.length; i++) {
+        const { p, pr } = items[i];
+        const tw = 0.75 + Math.sin(time * 1.6 + p.ph) * 0.25; // 闪烁
+        const size = Math.max(0.4, p.size * pr.scale * 0.55);
+        let cr, cg, cb;
+        if (p.kind === 0) {
+          // 花瓣/花蕊：颜色由整束当前配色决定，全花一起换色
+          const hl = 1 + 0.12 * Math.sin(time * 2.6 + p.wp * 2.4); // 轻微呼吸高光
+          let col;
+          if (p.lv > 1) col = lerp(S.light, [255, 255, 255], 0.55);
+          else if (p.lv < 0.5) col = lerp(S.deep, S.mid, p.lv * 2);
+          else col = lerp(S.mid, S.light, (p.lv - 0.5) * 2);
+          cr = clamp255(col[0] * hl + p.jit);
+          cg = clamp255(col[1] * hl + p.jit);
+          cb = clamp255(col[2] * hl + p.jit);
+        } else if (p.kind === 3) {
+          // 漂浮光点：跟随当前配色
+          const col = lerp(S.glow, S.glow2, p.pk);
+          cr = col[0]; cg = col[1]; cb = col[2];
+        } else {
+          // 花茎与叶子：保持绿色
+          cr = p.r; cg = p.g; cb = p.b;
+        }
+        // 光晕
+        ctx.fillStyle = 'rgba(' + (cr|0) + ',' + (cg|0) + ',' + (cb|0) + ',' + (0.10 * tw).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, size * 3.4, 0, TAU);
+        ctx.fill();
+        // 核心
+        const alpha = (p.kind === 3 ? 0.55 : 0.78) * tw;
+        ctx.fillStyle = 'rgba(' + (cr|0) + ',' + (cg|0) + ',' + (cb|0) + ',' + alpha.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, size, 0, TAU);
+        ctx.fill();
+      }
+      // 花束整体柔光（跟随当前颜色）
+      const glow = ctx.createRadialGradient(CX, CY - 10, 0, CX, CY - 10, Math.min(W, H) * 0.34);
+      const lr = S.light[0] | 0, lg = S.light[1] | 0, lb = S.light[2] | 0;
+      glow.addColorStop(0, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.07)');
+      glow.addColorStop(0.5, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.03)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    window.roseStart = function() {
+      resize();
+      if (!running) {
+        running = true;
+        animate();
+      }
+      // 和爱心一样自动一直换色：每 3 秒整束花一起变一种颜色
+      if (autoColorTimer) clearInterval(autoColorTimer);
+      autoColorTimer = setInterval(changeColor, 3000);
     };
   })();
